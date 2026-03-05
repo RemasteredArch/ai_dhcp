@@ -1,0 +1,13 @@
+[build]
+target = "thumbv6m-none-eabi"
+
+[env]
+DEFMT_LOG = "debug"
+
+[target.thumbv6m-none-eabi]
+runner = "probe-rs run --chip=RP2040"
+rustflags = [
+    "-Clink-arg=-Tlink.x",
+    "-Clink-arg=-Tlink-rp.x",
+    "-Clink-arg=-Tdefmt.x",
+]
