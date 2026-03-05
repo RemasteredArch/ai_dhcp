@@ -46,7 +46,8 @@ or you can obtain one at <https://mozilla.org/MPL/2.0/>.
 `ai_dhcp` contains code from other software.
 Besides the usual licenses of dependencies, two are of note:
 
-- `src/wifi.rs` is heavily modified from <https://github.com/embassy-rs/embassy/blob/5c1ca25/examples/rp/src/bin/wifi_tcp_server.rs>.
+- `src/wifi.rs` is heavily modified from <https://github.com/embassy-rs/embassy/blob/5c1ca25/examples/rp/src/bin/wifi_tcp_server.rs>
+  and `build.rs` is heavily modified from <https://github.com/embassy-rs/embassy/blob/5c1ca25/examples/rp/build.rs>.
   Original Embassy source code copyright Dario Nieuwenhuis et al., licensed under either the
   [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
   or the [MIT License](https://opensource.org/license/MIT).

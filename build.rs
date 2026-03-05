@@ -1,12 +1,22 @@
-use std::{env, fs::File, io::Write, path::PathBuf};
+// This module's implementation is heavily modified from
+// <https://github.com/embassy-rs/embassy/blob/5c1ca25/examples/rp/build.rs>.
+// Original Embassy source code copyright Dario Nieuwenhuis, licensed under the
+// [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0) or the
+// [MIT License](https://opensource.org/license/MIT).
 
-fn main() -> Result<(), Box<dyn core::error::Error>> {
+use std::{error::Error, fs::File, io::Write, path::PathBuf};
+
+fn main() -> Result<(), Box<dyn Error>> {
+    register_memory_link_script()
+}
+
+fn register_memory_link_script() -> Result<(), Box<dyn Error>> {
+    let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").unwrap());
+
     // Put `memory.x` in our output directory and ensure it's on the linker's search path.
-    let out = &PathBuf::from(env::var_os("OUT_DIR").unwrap());
-    File::create(out.join("memory.x"))?.write_all(include_bytes!("memory.x"))?;
-    println!("cargo:rustc-link-search={}", out.display());
+    File::create(out_dir.join("memory.x"))?.write_all(include_bytes!("memory.x"))?;
+    println!("cargo:rustc-link-search={}", out_dir.display());
 
-    // Tell `cargo` to rerun this script if `memory.x` changes.
     println!("cargo:rerun-if-changed=memory.x");
 
     Ok(())

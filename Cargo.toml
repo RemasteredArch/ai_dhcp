@@ -1,10 +1,15 @@
 [package]
 name = "ai_dhcp"
+description = "A satirical AI-enabled DHCP server"
+authors = ["RemasteredArch"]
+repository = "https://github.com/RemasteredArch/ai_dhcp"
+readme = true
+license = "MPL-2.0"
 version = "0.1.0"
 edition = "2024"
+publish = false
 
 [dependencies]
-# cortex-m = { version = "0.7.7", features = ["inline-asm"] }
 cortex-m-rt = "0.7.5"
 cyw43 = { version = "0.6.0", features = ["defmt"] }
 cyw43-firmware = { version = "0.1.0", features = ["wifi"] }

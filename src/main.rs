@@ -12,7 +12,6 @@
 
 use defmt::info;
 use embassy_executor::Spawner;
-use embassy_rp::{Peripherals, gpio::Level};
 use embassy_time::Timer;
 
 // Register `defmt` as the real-time transfer protocol handler and `panic_probe` as the panic
@@ -56,7 +55,6 @@ async fn main(spawner: Spawner) {
         net_control: &mut net_control,
     };
 
-    info!("skipping all that");
     loop {
         info!("enabling GPIO_0");
         led.enable().await;
@@ -66,20 +64,6 @@ async fn main(spawner: Spawner) {
         info!("disabling GPIO_0");
         led.disable().await;
         info!("pausing...");
-        Timer::after_millis(500).await;
-    }
-}
-
-async fn blink(p: Peripherals) -> ! {
-    let mut led = embassy_rp::gpio::Output::new(p.PIN_2, Level::Low);
-
-    loop {
-        defmt::info!("led on!");
-        led.set_high();
-        Timer::after_millis(500).await;
-
-        defmt::info!("led off!");
-        led.set_low();
         Timer::after_millis(500).await;
     }
 }
