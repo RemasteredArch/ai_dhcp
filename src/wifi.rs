@@ -12,12 +12,12 @@
 // [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0) or the
 // [MIT License](https://opensource.org/license/MIT).
 
-//! `wifi`: set up the [CYW43439](https://www.infineon.com/part/CYW43439) Wi-Fi chip.
+//! `wifi`: set up and use the [CYW43439](https://www.infineon.com/part/CYW43439) Wi-Fi chip.
 //!
-//! See [`init_wifi`] and [`NetworkConfig`].
+//! See [`init_wifi`] and [`UdpBinding`].
 //!
-//! Note that this module is based off of Embassy code and that it uses firmware under a proprietary
-//! license. See the [crate-level docs][`crate`].
+//! Note that this module is partially based off of Embassy code and that it uses firmware under a
+//! proprietary license. See the [crate-level docs][`crate`].
 
 use core::net::Ipv4Addr;
 
@@ -30,13 +30,19 @@ embassy_rp::bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => embassy_rp::pio::InterruptHandler<peripherals::PIO0>;
 });
 
+/// A configuration that describes how a network device should connect to an IP network.
 pub struct NetworkConfig<'s> {
+    /// The service set identifier (SSID) of the target network.
     pub ssid: &'s str,
+    /// The password used to log onto the network.
     pub password: &'s str,
+    /// The IPv4 configuration with which to connect to the network with.
     pub config: embassy_net::Config,
 }
 
 impl<'s> NetworkConfig<'s> {
+    /// An IPv4 configuration that matches my network.
+    // TO-DO: make this configurable without editing source code (probably using DHCP).
     fn default_ipv4_config() -> embassy_net::Config {
         embassy_net::Config::ipv4_static(StaticConfigV4 {
             address: Ipv4Cidr::new(Ipv4Addr::new(192, 168, 68, 213), 22),
@@ -46,6 +52,7 @@ impl<'s> NetworkConfig<'s> {
         })
     }
 
+    /// Connect to a network matching mine with the given credentials.
     pub fn new_with_default_ipv4(ssid: &'s str, password: &'s str) -> Self {
         Self {
             ssid,
@@ -61,6 +68,7 @@ impl Default for NetworkConfig<'static> {
     }
 }
 
+/// The buffers needed by a [`UdpBinding`] to process incoming and outgoing datagrams.
 pub struct UdpBuffers<const BUF_LEN: usize, const MAX_DATAGRAMS: usize> {
     rx_meta: [udp::PacketMetadata; MAX_DATAGRAMS],
     rx_buf: [u8; BUF_LEN],
@@ -88,6 +96,9 @@ impl<const BUF_LEN: usize, const MAX_DATAGRAMS: usize> Default
     }
 }
 
+/// A UDP socket bound to a given endpoint.
+///
+/// Provides an opinionated wrapper around [`embassy_net::udp::UdpSocket`].
 pub struct UdpBinding<'stack, const BUF_LEN: usize, const MAX_DATAGRAMS: usize> {
     socket: udp::UdpSocket<'stack>,
 }
@@ -95,6 +106,7 @@ pub struct UdpBinding<'stack, const BUF_LEN: usize, const MAX_DATAGRAMS: usize> 
 impl<'stack, const BUF_LEN: usize, const MAX_DATAGRAMS: usize>
     UdpBinding<'stack, BUF_LEN, MAX_DATAGRAMS>
 {
+    /// Use the given network stack to create a socket bound to an endpoint.
     pub fn new(
         stack: embassy_net::Stack<'stack>,
         endpoint: embassy_net::IpListenEndpoint,
@@ -113,10 +125,13 @@ impl<'stack, const BUF_LEN: usize, const MAX_DATAGRAMS: usize>
         Self { socket }
     }
 
+    /// Returns the endpoint that this socket is bound to.
     pub async fn endpoint(&self) -> embassy_net::IpListenEndpoint {
         self.socket.endpoint()
     }
 
+    /// Wait to receive a new UDP datagram, returning the subslice of `output_buf` that the new
+    /// datagram's contents were written to (or the error encountered while receiving a new datagram).
     pub async fn receive<'out>(
         &mut self,
         output_buf: &'out mut [u8],
@@ -125,6 +140,8 @@ impl<'stack, const BUF_LEN: usize, const MAX_DATAGRAMS: usize>
         Ok((&mut output_buf[..bytes], metadata))
     }
 
+    /// Send a UDP datagram with the given contents to the given endpoint, returning an error if one
+    /// was encountered.
     pub async fn send(
         &mut self,
         message: &[u8],
@@ -152,6 +169,14 @@ async fn network_event_loop(
     runner.run().await
 }
 
+/// Initialize the CYW43439 and connects to the given network, returning the network stack and
+/// control over the device (or an error encountered when attempting to spawn their background
+/// tasks). Must only be called once.
+///
+/// # Panics
+///
+/// - Panics if it cannot connect to the given network.
+/// - Panics if this function has been called more than one time.
 pub async fn init_wifi(
     spawner: embassy_executor::Spawner,
     p: embassy_rp::Peripherals,
@@ -178,7 +203,6 @@ pub async fn init_wifi(
             p.PIN_29,
             p.DMA_CH0,
         ),
-        // TO-DO: note licensing requirements.
         cyw43_firmware::CYW43_43439A0,
     )
     .await;
@@ -187,7 +211,6 @@ pub async fn init_wifi(
     spawner.spawn(wifi_event_loop(runner))?;
 
     info!("Initializing Wi-Fi chip");
-    // TO-DO: note licensing requirements.
     control.init(cyw43_firmware::CYW43_43439A0_CLM).await;
     control
         .set_power_management(cyw43::PowerManagementMode::PowerSave)

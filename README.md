@@ -46,7 +46,7 @@ or you can obtain one at <https://mozilla.org/MPL/2.0/>.
 `ai_dhcp` contains code from other software.
 Besides the usual licenses of dependencies, two are of note:
 
-- `src/wifi.rs` is heavily modified from <https://github.com/embassy-rs/embassy/blob/5c1ca25/examples/rp/src/bin/wifi_tcp_server.rs>
+- Parts of `src/wifi.rs` are heavily modified from <https://github.com/embassy-rs/embassy/blob/5c1ca25/examples/rp/src/bin/wifi_tcp_server.rs>
   and `build.rs` is heavily modified from <https://github.com/embassy-rs/embassy/blob/5c1ca25/examples/rp/build.rs>.
   Original Embassy source code copyright Dario Nieuwenhuis et al., licensed under either the
   [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
@@ -55,7 +55,7 @@ Besides the usual licenses of dependencies, two are of note:
   which includes firmware copyright George Robotics Pty Ltd,
   distributed under either a general noncommercial license
   or a more permissive license that may only be used with the RP2040 or other Raspberry Pi Ltd devices;
-  see [`LICENSE-RPI`](./LICENSE-RPI) for this license.
+  see [`LICENSE-RPI`](./LICENSE-RPI) for the latter license.
   The Rust wrapper is written by Keziah Biermann and distributed under the [Unlicense](https://unlicense.org/).
 
 [debug probe]: https://www.raspberrypi.com/products/debug-probe/

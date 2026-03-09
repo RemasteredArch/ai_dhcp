@@ -12,9 +12,8 @@
 
 use core::convert::Infallible;
 
-use defmt::{debug, error, info};
+use defmt::{error, info};
 use embassy_executor::Spawner;
-use embassy_time::Timer;
 
 // Register `defmt` as the real-time transfer protocol handler and `panic_probe` as the panic
 // handler.
@@ -27,7 +26,9 @@ use crate::wifi::UdpBuffers;
 mod macros;
 mod wifi;
 
+/// The onboard status LED controlled by the CYW43439.
 struct OnBoardLed<'ctl> {
+    /// The control driver for the CYW43439.
     net_control: &'ctl mut cyw43::Control<'static>,
 }
 
@@ -36,12 +37,14 @@ impl OnBoardLed<'_> {
     const LED_ENABLE: bool = true;
     const LED_DISABLE: bool = false;
 
+    /// Enable the LED, causing it to glow.
     async fn enable(&mut self) {
         self.net_control
             .gpio_set(Self::GPIO_PIN_NUM, Self::LED_ENABLE)
             .await
     }
 
+    /// Disable the LED, causing it to no longer glow.
     async fn disable(&mut self) {
         self.net_control
             .gpio_set(Self::GPIO_PIN_NUM, Self::LED_DISABLE)
@@ -56,6 +59,7 @@ async fn main(spawner: Spawner) {
     handle_udp(spawner, p).await.unwrap();
 }
 
+/// Initialize Wi-Fi and start a UDP echo server.
 async fn handle_udp(
     spawner: Spawner,
     p: embassy_rp::Peripherals,
@@ -86,9 +90,10 @@ async fn handle_udp(
     .await
     .unwrap();
     unreachable!()
-    // blink_forever(&mut net_control).await
 }
 
+/// Start a UDP echo server that responds to requests with the contents of the request and blinks
+/// while it does so.
 async fn udp_echo<'stack, const BUF_LEN: usize, const MAX_DATAGRAMS: usize>(
     mut socket: wifi::UdpBinding<'stack, BUF_LEN, MAX_DATAGRAMS>,
     mut led: OnBoardLed<'_>,
@@ -119,51 +124,6 @@ async fn udp_echo<'stack, const BUF_LEN: usize, const MAX_DATAGRAMS: usize>(
             error!("Failed to send datagram: {}", err);
         }
 
-        print_stack_pointer();
-
         led.disable().await;
-    }
-}
-
-/// Print the stack pointer of the caller, the stack address of a byte variable (to hint at the
-/// actual end of the stack), and the absolute difference of these two addresses.
-// Must be inlined to make sure it reports the stack pointer of the caller, not of this function.
-#[inline(always)]
-fn print_stack_pointer() {
-    // SAFETY: all this does is copy `sp` (actually `r13`) into a general-purpose register.
-    //
-    // TO-DO: does `mov Rd, sp` _actually_ have no side effects?
-    let sp = unsafe {
-        let sp: u32;
-        core::arch::asm!("mov {}, sp", out(reg) sp, options(pure, nomem, nostack, preserves_flags));
-        sp
-    };
-
-    // Get the location of a byte placed on the stack, to provide an alternate data point from the
-    // actual stack pointer.
-    let b: u8 = 0;
-    let ptr = &raw const b as u32;
-
-    debug!("sp (r13):  0x{:x}", sp);
-    debug!("u8 ptr:    0x{:x}", ptr);
-    debug!("distance:  {}", ptr.abs_diff(sp));
-}
-
-#[allow(unused)]
-async fn blink_forever(net_control: &mut cyw43::Control<'static>) -> ! {
-    info!("Blinking forever");
-
-    let mut led = OnBoardLed { net_control };
-
-    loop {
-        info!("enabling GPIO_0");
-        led.enable().await;
-        info!("pausing...");
-        Timer::after_millis(500).await;
-
-        info!("disabling GPIO_0");
-        led.disable().await;
-        info!("pausing...");
-        Timer::after_millis(500).await;
     }
 }
