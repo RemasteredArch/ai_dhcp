@@ -37,9 +37,9 @@ If you're interested, let me know.
 
 ## License
 
-Sciutil is licensed under the Mozilla Public License,
+`ai_dhcp` is licensed under the Mozilla Public License,
 version 2.0 or (as the license stipulates) any later version.
-A copy of the license should be distributed with sciutil,
+A copy of the license should be distributed with `ai_dhcp`,
 located at [`LICENSE`](./LICENSE),
 or you can obtain one at <https://mozilla.org/MPL/2.0/>.
 
