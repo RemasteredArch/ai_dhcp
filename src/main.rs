@@ -12,7 +12,7 @@
 
 use core::convert::Infallible;
 
-use defmt::{error, info};
+use defmt::{debug, error, info, trace};
 use embassy_executor::Spawner;
 
 // Register `defmt` as the real-time transfer protocol handler and `panic_probe` as the panic
@@ -75,10 +75,10 @@ async fn handle_udp(
         .await
         .unwrap();
 
-    info!("Initializing buffers");
+    trace!("Initializing buffers");
     let buffers =
         singleton!(UdpBuffers::new(), UdpBuffers<BUF_SIZE, {BUF_SIZE / LARGE_DATAGRAM_SIZE}>);
-    info!("Binding to socket");
+    trace!("Binding to socket");
     let socket = wifi::UdpBinding::new(net_stack, DHCP_SERVER_PORT.into(), buffers);
 
     udp_echo(
@@ -98,23 +98,40 @@ async fn udp_echo<'stack, const BUF_LEN: usize, const MAX_DATAGRAMS: usize>(
     mut socket: wifi::UdpBinding<'stack, BUF_LEN, MAX_DATAGRAMS>,
     mut led: OnBoardLed<'_>,
 ) -> Result<Infallible, embassy_net::udp::RecvError> {
-    info!("Starting UDP echo on port 67");
+    match socket.endpoint().await {
+        embassy_net::IpListenEndpoint {
+            addr: Some(addr),
+            port,
+        } => info!("Starting UDP echo server on {}:{}", addr, port),
+        embassy_net::IpListenEndpoint { addr: None, port } => {
+            info!("Starting UDP echo server on port {}", port)
+        }
+    }
 
     let mut output_buf = [0; BUF_LEN];
 
     loop {
+        info!("Waiting for new datagram");
         let (datagram, metadata) = socket.receive(&mut output_buf).await?;
         led.enable().await;
-        info!("Received a new datagram: {}\n", metadata);
+
+        match metadata.local_address {
+            Some(destination) => info!(
+                "Received a new datagram from {} (destined for {})",
+                metadata.endpoint, destination,
+            ),
+            None => info!("Received a new datagram from {}", metadata.endpoint),
+        }
+        debug!("Extra metadata: {}", metadata.meta);
 
         match str::from_utf8(datagram) {
             Ok(as_str) => info!(
-                "Replying with contents (str, {} bytes): {}\n",
+                "Replying with contents ({} bytes): {}",
                 as_str.len(),
                 as_str
             ),
             Err(_) => info!(
-                "Replying with contents (bytes, {} bytes): {:?}\n",
+                "Replying with contents ({} bytes): {:?}",
                 datagram.len(),
                 datagram
             ),

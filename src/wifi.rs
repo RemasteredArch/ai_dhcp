@@ -21,7 +21,7 @@
 
 use core::net::Ipv4Addr;
 
-use defmt::info;
+use defmt::{debug, info, trace};
 use embassy_net::{Ipv4Cidr, StaticConfigV4, udp};
 use embassy_rp::{gpio, peripherals};
 use heapless::Vec;
@@ -207,17 +207,17 @@ pub async fn init_wifi(
     )
     .await;
 
-    info!("Spawning Wi-Fi event loop");
+    trace!("Spawning Wi-Fi event loop");
     spawner.spawn(wifi_event_loop(runner))?;
 
-    info!("Initializing Wi-Fi chip");
+    trace!("Initializing Wi-Fi chip");
     control.init(cyw43_firmware::CYW43_43439A0_CLM).await;
     control
         .set_power_management(cyw43::PowerManagementMode::PowerSave)
         .await;
 
     let rng_seed = embassy_rp::clocks::RoscRng.next_u64();
-    info!("Spawning network event loop with random seed {}", rng_seed);
+    trace!("Spawning network event loop with random seed {}", rng_seed);
     let (stack, runner) = embassy_net::new(
         driver,
         net_config.config,
@@ -229,7 +229,7 @@ pub async fn init_wifi(
     );
     spawner.spawn(network_event_loop(runner))?;
 
-    info!("Joining Wi-Fi network {}", net_config.ssid);
+    debug!("Joining Wi-Fi network {}", net_config.ssid);
     control
         .join(
             net_config.ssid,
@@ -238,7 +238,7 @@ pub async fn init_wifi(
         .await
         .expect("failed to join network!");
 
-    info!("Waiting for link signal");
+    debug!("Waiting for link signal");
     stack.wait_link_up().await;
 
     info!("Finished initializing Wi-Fi");
