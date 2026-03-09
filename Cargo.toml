@@ -23,8 +23,10 @@ package.edition = "2024"
 package.publish = false
 
 [workspace.lints]
-# clippy.nursery = "warn"
-# clippy.pedantic = "warn"
+clippy.nursery = { level = "warn", priority = -1 }
+clippy.pedantic = { level = "warn", priority = -1 }
+clippy.future_not_send = "allow"
+clippy.single_match_else = "allow"
 
 [workspace.dependencies]
 ai_dhcp_core = { version = "*", path = "./lib/ai_dhcp_core/" }

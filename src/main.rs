@@ -41,7 +41,7 @@ impl OnBoardLed<'_> {
     async fn enable(&mut self) {
         self.net_control
             .gpio_set(Self::GPIO_PIN_NUM, Self::LED_ENABLE)
-            .await
+            .await;
     }
 
     /// Disable the LED, causing it to no longer glow.
@@ -54,7 +54,7 @@ impl OnBoardLed<'_> {
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
-    let p = embassy_rp::init(Default::default());
+    let p = embassy_rp::init(embassy_rp::config::Config::default());
 
     handle_udp(spawner, p).await.unwrap();
 }
@@ -71,7 +71,7 @@ async fn handle_udp(
     /// The UDP port that a DHCP server listens on for DHCP discovery messages.
     const DHCP_SERVER_PORT: u16 = 67;
 
-    let (net_stack, mut net_control) = wifi::init_wifi(spawner, p, Default::default())
+    let (net_stack, mut net_control) = wifi::init_wifi(spawner, p, wifi::NetworkConfig::default())
         .await
         .unwrap();
 
@@ -81,30 +81,29 @@ async fn handle_udp(
     trace!("Binding to socket");
     let socket = wifi::UdpBinding::new(net_stack, DHCP_SERVER_PORT.into(), buffers);
 
-    udp_echo(
+    Ok(udp_echo(
         socket,
         OnBoardLed {
             net_control: &mut net_control,
         },
     )
     .await
-    .unwrap();
-    unreachable!()
+    .unwrap())
 }
 
 /// Start a UDP echo server that responds to requests with the contents of the request and blinks
 /// while it does so.
-async fn udp_echo<'stack, const BUF_LEN: usize, const MAX_DATAGRAMS: usize>(
-    mut socket: wifi::UdpBinding<'stack, BUF_LEN, MAX_DATAGRAMS>,
+async fn udp_echo<const BUF_LEN: usize, const MAX_DATAGRAMS: usize>(
+    socket: wifi::UdpBinding<'_, BUF_LEN, MAX_DATAGRAMS>,
     mut led: OnBoardLed<'_>,
 ) -> Result<Infallible, embassy_net::udp::RecvError> {
-    match socket.endpoint().await {
+    match socket.endpoint() {
         embassy_net::IpListenEndpoint {
             addr: Some(addr),
             port,
         } => info!("Starting UDP echo server on {}:{}", addr, port),
         embassy_net::IpListenEndpoint { addr: None, port } => {
-            info!("Starting UDP echo server on port {}", port)
+            info!("Starting UDP echo server on port {}", port);
         }
     }
 
@@ -128,12 +127,12 @@ async fn udp_echo<'stack, const BUF_LEN: usize, const MAX_DATAGRAMS: usize>(
             Ok(as_str) => info!(
                 "Replying with contents ({} bytes): {}",
                 as_str.len(),
-                as_str
+                as_str,
             ),
             Err(_) => info!(
                 "Replying with contents ({} bytes): {:?}",
                 datagram.len(),
-                datagram
+                datagram,
             ),
         }
 

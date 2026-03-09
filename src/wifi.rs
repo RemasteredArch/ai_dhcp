@@ -78,7 +78,7 @@ pub struct UdpBuffers<const BUF_LEN: usize, const MAX_DATAGRAMS: usize> {
 
 impl<const BUF_LEN: usize, const MAX_DATAGRAMS: usize> UdpBuffers<BUF_LEN, MAX_DATAGRAMS> {
     /// Create an empty set of buffers.
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             rx_meta: [udp::PacketMetadata::EMPTY; _],
             rx_buf: [0; _],
@@ -126,14 +126,14 @@ impl<'stack, const BUF_LEN: usize, const MAX_DATAGRAMS: usize>
     }
 
     /// Returns the endpoint that this socket is bound to.
-    pub async fn endpoint(&self) -> embassy_net::IpListenEndpoint {
+    pub fn endpoint(&self) -> embassy_net::IpListenEndpoint {
         self.socket.endpoint()
     }
 
     /// Wait to receive a new UDP datagram, returning the subslice of `output_buf` that the new
     /// datagram's contents were written to (or the error encountered while receiving a new datagram).
     pub async fn receive<'out>(
-        &mut self,
+        &self,
         output_buf: &'out mut [u8],
     ) -> Result<(&'out mut [u8], udp::UdpMetadata), udp::RecvError> {
         let (bytes, metadata) = self.socket.recv_from(output_buf).await?;
@@ -143,7 +143,7 @@ impl<'stack, const BUF_LEN: usize, const MAX_DATAGRAMS: usize>
     /// Send a UDP datagram with the given contents to the given endpoint, returning an error if one
     /// was encountered.
     pub async fn send(
-        &mut self,
+        &self,
         message: &[u8],
         to: embassy_net::IpEndpoint,
     ) -> Result<(), udp::SendError> {
