@@ -22,34 +22,9 @@
 use core::net::Ipv4Addr;
 
 use defmt::info;
-use embassy_net::{Ipv4Cidr, StaticConfigV4};
+use embassy_net::{Ipv4Cidr, StaticConfigV4, udp};
 use embassy_rp::{gpio, peripherals};
 use heapless::Vec;
-
-/// A not-at-all-secure way of getting an at least vaguely random value.
-///
-/// I don't particularly care enough to implement a hashing algorithm or something, it's either this
-/// or a hardcoded value.
-// TO-DO: replace this with a more thoroughly random value.
-fn hardware_seed() -> u64 {
-    /// An entirely arbitrary number, composed of 64 bits that were equally likely to be one or
-    /// zero.
-    ///
-    /// Quite literally produced by `for i in {1..64}; do printf '%d' $(($RANDOM % 2)); done`.
-    const RAND: u64 = 0x61703AB55FD2BB7A;
-
-    embassy_time::Instant::now().as_ticks() ^ RAND
-}
-
-/// Instantiate a static cell and take its value, returning a mutable reference.
-///
-/// From <https://www.darrik.dev/writing/blinking-pico-w-onboard-led-rust/>.
-macro_rules! singleton {
-    ($val:expr, $ty:ty) => {{
-        static SINGLETON_CELL: ::static_cell::StaticCell<$ty> = ::static_cell::StaticCell::new();
-        SINGLETON_CELL.init_with(move || $val)
-    }};
-}
 
 embassy_rp::bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => embassy_rp::pio::InterruptHandler<peripherals::PIO0>;
@@ -83,6 +58,79 @@ impl<'s> NetworkConfig<'s> {
 impl Default for NetworkConfig<'static> {
     fn default() -> Self {
         NetworkConfig::new_with_default_ipv4(env!("AI_DHCP_NET_SSID"), env!("AI_DHCP_NET_PASSWORD"))
+    }
+}
+
+pub struct UdpBuffers<const BUF_LEN: usize, const MAX_DATAGRAMS: usize> {
+    rx_meta: [udp::PacketMetadata; MAX_DATAGRAMS],
+    rx_buf: [u8; BUF_LEN],
+    tx_meta: [udp::PacketMetadata; MAX_DATAGRAMS],
+    tx_buf: [u8; BUF_LEN],
+}
+
+impl<const BUF_LEN: usize, const MAX_DATAGRAMS: usize> UdpBuffers<BUF_LEN, MAX_DATAGRAMS> {
+    /// Create an empty set of buffers.
+    pub fn new() -> Self {
+        Self {
+            rx_meta: [udp::PacketMetadata::EMPTY; _],
+            rx_buf: [0; _],
+            tx_meta: [udp::PacketMetadata::EMPTY; _],
+            tx_buf: [0; _],
+        }
+    }
+}
+
+impl<const BUF_LEN: usize, const MAX_DATAGRAMS: usize> Default
+    for UdpBuffers<BUF_LEN, MAX_DATAGRAMS>
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub struct UdpBinding<'stack, const BUF_LEN: usize, const MAX_DATAGRAMS: usize> {
+    socket: udp::UdpSocket<'stack>,
+}
+
+impl<'stack, const BUF_LEN: usize, const MAX_DATAGRAMS: usize>
+    UdpBinding<'stack, BUF_LEN, MAX_DATAGRAMS>
+{
+    pub fn new(
+        stack: embassy_net::Stack<'stack>,
+        endpoint: embassy_net::IpListenEndpoint,
+        buffers: &'static mut UdpBuffers<BUF_LEN, MAX_DATAGRAMS>,
+    ) -> Self {
+        let UdpBuffers {
+            rx_meta,
+            rx_buf,
+            tx_meta,
+            tx_buf,
+        } = buffers;
+
+        let mut socket = udp::UdpSocket::new(stack, rx_meta, rx_buf, tx_meta, tx_buf);
+        socket.bind(endpoint).unwrap();
+
+        Self { socket }
+    }
+
+    pub async fn endpoint(&self) -> embassy_net::IpListenEndpoint {
+        self.socket.endpoint()
+    }
+
+    pub async fn receive<'out>(
+        &mut self,
+        output_buf: &'out mut [u8],
+    ) -> Result<(&'out mut [u8], udp::UdpMetadata), udp::RecvError> {
+        let (bytes, metadata) = self.socket.recv_from(output_buf).await?;
+        Ok((&mut output_buf[..bytes], metadata))
+    }
+
+    pub async fn send(
+        &mut self,
+        message: &[u8],
+        to: embassy_net::IpEndpoint,
+    ) -> Result<(), udp::SendError> {
+        self.socket.send_to(message, to).await
     }
 }
 
@@ -145,7 +193,7 @@ pub async fn init_wifi(
         .set_power_management(cyw43::PowerManagementMode::PowerSave)
         .await;
 
-    let rng_seed = hardware_seed();
+    let rng_seed = embassy_rp::clocks::RoscRng.next_u64();
     info!("Spawning network event loop with random seed {}", rng_seed);
     let (stack, runner) = embassy_net::new(
         driver,
