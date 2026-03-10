@@ -25,12 +25,18 @@ package.publish = false
 [workspace.lints]
 clippy.nursery = { level = "warn", priority = -1 }
 clippy.pedantic = { level = "warn", priority = -1 }
-clippy.future_not_send = "allow"
+
+# Disabled because it was late at night. This is likely to be enabled later.
 clippy.single_match_else = "allow"
+
+# Embassy seems to be broadly not `Send`.
+clippy.future_not_send = "allow"
+rust.async_fn_in_trait = "allow"
 
 [workspace.dependencies]
 ai_dhcp_core = { version = "*", path = "./lib/ai_dhcp_core/" }
 defmt = "1.0.1"
+heapless = { version = "0.8.0", default-features = false }
 
 [dependencies]
 ai_dhcp_core.workspace = true
@@ -62,7 +68,7 @@ embassy-time = { version = "0.5.0", features = [
     "defmt",
     "defmt-timestamp-uptime",
 ] }
-heapless = { version = "0.8.0", default-features = false }
+heapless.workspace = true
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 
 static_cell = { version = "2.1.1" }

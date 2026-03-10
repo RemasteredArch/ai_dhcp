@@ -38,6 +38,7 @@ name = "ai_dhcp_core"
 version = "0.1.0"
 dependencies = [
  "defmt 1.0.1",
+ "heapless 0.8.0",
 ]
 
 [[package]]

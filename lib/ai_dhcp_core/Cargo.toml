@@ -11,3 +11,4 @@ workspace = true
 
 [dependencies]
 defmt.workspace = true
+heapless.workspace = true

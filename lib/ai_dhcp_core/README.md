@@ -1,6 +1,6 @@
 # `ai_dhcp_core`
 
-`ai_dhcp_core` is the actual DHCP implementation of `ai_dhcp`.
+`ai_dhcp_core` is the actual DHCPv4 implementation of `ai_dhcp`.
 
 ## Architecture
 

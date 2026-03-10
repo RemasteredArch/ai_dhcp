@@ -10,7 +10,7 @@ Or do, I can't stop you. Chaos _is_ the point, after all.
 
 `ai_dhcp` is not yet complete, but the rough architecture is as follows:
 
-- A Raspberry Pi Pico W running `ai_dhcp` acts as a [DHCP] server,
+- A Raspberry Pi Pico W running `ai_dhcp` acts as a [DHCPv4] server,
   passing basic client information off to an LLM that decides the response sent back to the client.
   - This does not require any extra hardware,
     just the Pico and, ideally, a debug probe.
@@ -59,7 +59,7 @@ Besides the usual licenses of dependencies, two are of note:
   The Rust wrapper is written by Keziah Biermann and distributed under the [Unlicense](https://unlicense.org/).
 
 [debug probe]: https://www.raspberrypi.com/products/debug-probe/
-[dhcp]: https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol
+[dhcpv4]: https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol
 [ollama]: https://ollama.com/
 [usbipd]: https://github.com/dorssel/usbipd-win
 [`llama.cpp`]: https://github.com/ggml-org/llama.cpp
